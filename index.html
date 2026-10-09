@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>gTa el cartero</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="gTa el cartero">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-512.png">
 <meta name="description" content="Pela, el cartero de Chañar Ladeado, en busca de su libertad. Un juego entre amigos, homenaje a Grand Theft Auto.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="gTa el cartero">
@@ -41,9 +47,13 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);overflow:hi
 #fade{position:fixed;inset:0;background:#000;opacity:0;transition:opacity .6s;display:grid;place-items:center;z-index:30;font-family:var(--f-hud);font-size:30px;color:var(--ink);text-align:center;padding:24px}
 #fade.on{opacity:1}
 #bigmap{position:fixed;inset:0;background:rgba(5,6,8,.92);z-index:25;display:grid;place-items:center;cursor:pointer}
-#bigmap canvas{width:min(94vw,150vh);height:auto;max-height:86vh;border:2px solid var(--edge)}
+#bigmap{overflow:hidden;touch-action:none}
+#bigmap canvas{width:auto;height:auto;max-width:94vw;max-height:84vh;border:2px solid var(--edge);transform-origin:center;cursor:grab;touch-action:none}
+#bigmap .close{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:14px;font-family:var(--f-hud);font-size:22px;color:var(--ink);background:var(--panel);border:1px solid var(--edge);padding:4px 12px;cursor:pointer;z-index:2}
 #bigmap .hint{position:absolute;bottom:14px;left:0;right:0;text-align:center;font-family:var(--f-hud);font-size:20px;color:var(--dim)}
 body.in-menu #stats{display:none}
+.hbtns{display:flex;gap:6px;align-items:flex-start}
+#fsBtn{pointer-events:auto;font:inherit;font-size:20px;line-height:1;color:var(--dim);background:transparent;border:1px solid var(--edge);padding:4px 9px;cursor:pointer}
 #mute{pointer-events:auto;font:inherit;font-size:20px;color:var(--dim);background:transparent;border:1px solid var(--edge);padding:4px 10px;cursor:pointer}
 #mute:focus-visible,#pad button:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
 #dlg{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);width:min(620px,calc(100% - 32px));box-sizing:border-box;background:var(--panel);border:2px solid var(--edge);padding:10px 16px 14px;font-family:var(--f-hud);font-size:23px;line-height:1.15;min-height:84px}
@@ -104,7 +114,7 @@ body.in-menu #joy,body.in-menu #rot{display:none!important}
   #hud{font-size:15px;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 6px) calc(env(safe-area-inset-right,0px) + 10px) 0 calc(env(safe-area-inset-left,0px) + 10px)}
   #hud .place{white-space:nowrap;max-width:34vw;overflow:hidden;text-overflow:ellipsis}#hud .time{font-size:17px;margin-top:2px}
   #stats{gap:8px;font-size:14px;flex-wrap:nowrap}#stats .bar i{font-size:12px}#stats .bar b{width:46px;height:7px;margin-left:3px}
-  #mute{font-size:13px;padding:2px 6px}
+  #mute{font-size:13px;padding:2px 6px}#fsBtn{font-size:15px;padding:2px 7px}
   #minimap{top:calc(env(safe-area-inset-top,0px) + 40px);width:104px;height:104px}
   #dlg{font-size:17px;min-height:0;padding:7px 12px 9px;width:min(520px,calc(100% - 340px))}
   #bikeBtn{font-size:16px;padding:5px 10px}
@@ -112,7 +122,7 @@ body.in-menu #joy,body.in-menu #rot{display:none!important}
 }
 @media (pointer:coarse) and (orientation:portrait){#stats .money{white-space:nowrap}#stats .bar i{font-size:10px}#stats .bar b{width:30px}#hud .place{max-width:30vw}#dlg{width:calc(100% - 24px);top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 186px)}}
 @media (pointer:coarse){
-  #joy{display:block}#run{display:block}
+  #joy{display:block}
   #dlg{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 64px)}
 }
 </style>
@@ -123,10 +133,10 @@ body.in-menu #joy,body.in-menu #rot{display:none!important}
 <div id="hud">
   <div><div class="place">PLAZA · ESQUINA DE LA IGLESIA</div><div class="time" id="clock">23:47</div></div>
   <div id="stats"><span class="money" id="stPlata">$ 0</span><span class="bar"><i>FUERZA</i><b><em id="stF" style="width:10%"></em></b></span><span class="bar"><i>VIDA</i><b><em id="stV" class="v" style="width:100%"></em></b></span><span class="bar"><i>CORDURA</i><b><em id="stC" class="c" style="width:100%"></em></b></span></div>
-  <button id="mute" type="button">SONIDO: SÍ</button>
+  <div class="hbtns"><button id="fsBtn" type="button" aria-label="Pantalla completa">⛶</button><button id="mute" type="button">SONIDO: SÍ</button></div>
 </div>
 <div id="fade" hidden><div id="fadeTxt"></div></div>
-<div id="bigmap" hidden><canvas id="bigmapC"></canvas><div class="hint">M o tocá el mapa para cerrar</div></div>
+<div id="bigmap" hidden><canvas id="bigmapC"></canvas><button class="close" type="button">✕ CERRAR</button><div class="hint">Arrastrá para moverte · rueda o dos dedos para zoom · M cierra</div></div>
 <canvas id="minimap" width="320" height="320" aria-label="Minimapa"></canvas>
 <div id="dlg" hidden><div class="who" id="who"></div><div class="txt" id="txt"></div></div>
 <div id="pad" aria-label="Controles táctiles" hidden>
@@ -146,6 +156,7 @@ body.in-menu #joy,body.in-menu #rot{display:none!important}
       <button class="it on" type="button" data-a="modes">Iniciar partida</button>
       <button class="it" type="button" data-a="cont" disabled>Continuar</button>
       <button class="it" type="button" data-a="snd" id="sndItem">Sonido: sí</button>
+      <button class="it" type="button" data-a="fs">Pantalla completa</button>
       <button class="it" type="button" data-a="cred">Créditos</button>
     </nav>
     <nav id="modes" aria-label="Elegir modo" hidden>
@@ -199,7 +210,7 @@ function ps1(m){
 const M=o=>ps1(new THREE.MeshLambertMaterial(o));
 
 /* rendimiento: resolución adaptable (baja si la PC no llega a ~40 cuadros por segundo, sube si sobra) */
-const COARSE=matchMedia('(pointer:coarse)').matches,PERF={max:Math.min(devicePixelRatio||1,COARSE?1.25:1.5),pr:Math.min(devicePixelRatio||1,COARSE?1.25:1.5),acc:0,n:0,t:0};
+const COARSE=matchMedia('(pointer:coarse)').matches,PERF={max:Math.min(devicePixelRatio||1,COARSE?2:1.5),pr:Math.min(devicePixelRatio||1,COARSE?1.6:1.5),acc:0,n:0,t:0};
 function resize(){
   const a=innerWidth/innerHeight, RW=innerWidth, RH=innerHeight;
   renderer.setPixelRatio(PERF.pr);renderer.setSize(RW,RH,false);
@@ -1315,10 +1326,21 @@ paco.root.position.set(4.85,0,-53.95);paco.root.rotation.y=Math.PI;paco.body.vis
 const ramon=person({skin:0xb48a6a,skinCss:'#b48a6a',shirt:0x6b6250,pants:0x3d3a33,hair:0x9a9a96,hat:0x1d1d22,longSleeve:true,fat:1.08,face:{beard:'rgba(170,168,160,.92)',brow:'rgba(200,200,195,.9)'}});
 sit(ramon);ramon.root.position.set(-5.8,0,-8.34);ramon.root.rotation.y=-Math.PI/4;
 ramon.armL.rotation.x=ramon.armR.rotation.x=-.35;ramon.armL.fore.rotation.x=ramon.armR.fore.rotation.x=-1;ramon.body.rotation.x=.12;scene.add(ramon.root);
+/* Don Ramón quedó en pedo y se durmió en el banco: botellas de vino y de cerveza tiradas a sus pies, una parada, y las "zzz" */
+const RAMON_ZZ=['Zzzz... la campana... a las tres... zzzz','Rrrrr... hic... otro vinito, Negro... zzz','Mmmh... dejame acá nomás... zzzz...','...'];let ramonZ=null;
+(function(){const R0=ramon.root.position,fy=-Math.PI/4,fx=Math.sin(fy),fz=Math.cos(fy),rx=Math.cos(fy),rz=-Math.sin(fy),Y=.09;
+  const vino=new THREE.MeshStandardMaterial({color:0x1f3a1c,roughness:.12,metalness:.1,transparent:true,opacity:.9}),birra=new THREE.MeshStandardMaterial({color:0x5a2e0c,roughness:.12,metalness:.1,transparent:true,opacity:.88}),lab=new THREE.MeshStandardMaterial({color:0xe9dcb8,roughness:.7});
+  const V=a=>a.map(q=>new THREE.Vector2(q[0],q[1])),bG=new THREE.LatheGeometry(V([[0,0],[.033,0],[.034,.01],[.034,.17],[.03,.2],[.014,.24],[.013,.29],[.015,.295],[0,.295]]),16),
+    wG=new THREE.LatheGeometry(V([[0,0],[.038,0],[.039,.01],[.039,.2],[.034,.24],[.015,.27],[.014,.33],[.016,.335],[0,.335]]),16);
+  const put=(geo,m,a,b,lying,rot)=>{const o=new THREE.Mesh(geo,m);o.position.set(R0.x+fx*a+rx*b,Y+(lying?.035:0),R0.z+fz*a+rz*b);if(lying){o.rotation.z=Math.PI/2;o.rotation.y=rot;}scene.add(o);
+    if(!lying){const l=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.08,16,1,true),lab);l.position.set(o.position.x,Y+.1,o.position.z);scene.add(l);}return o;};
+  put(wG,vino,.45,.25,false);put(wG,vino,.62,-.1,true,.9);put(bG,birra,.38,-.35,true,2.2);put(bG,birra,.7,.35,true,-.4);
+  const zt=ctex(128,64,(g,w,h)=>{g.clearRect(0,0,w,h);g.font='700 40px Georgia, serif';g.fillStyle='rgba(235,230,215,.9)';g.fillText('z',8,52);g.font='700 30px Georgia, serif';g.fillText('z',44,34);g.font='700 22px Georgia, serif';g.fillText('z',74,20);});
+  ramonZ=new THREE.Sprite(new THREE.SpriteMaterial({map:zt,transparent:true,depthWrite:false}));ramonZ.scale.set(.5,.25,1);scene.add(ramonZ);})();
 
 /* Doña Elsa: va y viene con la bolsa de los mandados */
 const elsa=person({skin:0xc9a183,skinCss:'#c9a183',shirt:0x7a4a5a,pants:0x3a2e33,hair:0xb9b4ae,skirt:0x4a3540,bag:0xc9b26a,s:.93,fat:1.12,longHair:true,longSleeve:true});
-elsa.root.position.set(0,0,17);scene.add(elsa.root);
+elsa.root.position.set(0,0,17);   /* Doña Elsa: sacada por Camilo (no se agrega a la escena) */
 
 /* El hombre de la esquina */
 const esq=person({skin:0xd6cfc4,skinCss:'#d6cfc4',shirt:0x1b1c20,pants:0x141418,hair:0x0c0c0c,s:1.12,longSleeve:true,face:{noMouth:true,hollow:true,brow:'rgba(0,0,0,0)'}});
@@ -1354,7 +1376,7 @@ const ALIEN_LOOK={skin:0x8a8d86,head:1.4,eye:1.1,top:.14};
 /* El tío: aparece cuando te sentás en su banco */
 const tio=person({skin:0xc9a287,skinCss:'#c9a287',shirt:0x141416,pants:0x18181c,hair:0x24170f});
 tio.root.position.set(BENCH.x+Math.cos(BENCH.th)*-.45,.08,BENCH.z-Math.sin(BENCH.th)*-.45);tio.root.rotation.y=BENCH.th;tio.body.visible=false;tio.root.visible=false;scene.add(tio.root);
-const pibe=person({skin:0xd1a887,skinCss:'#d1a887',shirt:0xa8302a,pants:0x2a3a5a,hair:0x3a2414,s:.9});scene.add(pibe.root);pibe.ph=0;
+const pibe=person({skin:0xd1a887,skinCss:'#d1a887',shirt:0xa8302a,pants:0x2a3a5a,hair:0x3a2414,s:.9});pibe.ph=0;   /* el pibe que corre: sacado por Camilo */
 let bikeS=40,bikeYaw=0;
 function loopPos(s){const L=44,P=176;s=((s%P)+P)%P;const k=Math.floor(s/L),f=s%L;
   if(k===0)return[-22+f,-22,Math.PI/2];if(k===1)return[22,-22+f,0];if(k===2)return[22-f,22,-Math.PI/2];return[-22,22-f,Math.PI];}
@@ -1416,10 +1438,8 @@ const talk=[
   {who:'Rata',txt:()=>RATA_LINES[Math.min(rataS.line,RATA_LINES.length-1)],pos:()=>rata.root.position,r:7,cond:()=>rataS.st==='talk'},
   {who:'Rata (desde el camión)',txt:()=>RATA_SHOUT[Math.min(rataS.line,RATA_SHOUT.length-1)],pos:()=>({x:RT_X+1.25,z:rataS.z-1}),r:26,cond:()=>rataS.st==='shout'},
   {who:'Paco',cond:()=>rataS.st!=='talk',txt:'¿Qué hacés, Pela? ¿Me trajiste la bici para arreglar? ¿Se te volvió a romper? Mirá lo que es esta moto, un desastre: el dueño ni la cuida. Se la voy a arreglar así nomás... vos no digas nada.',pos:()=>paco.root.position,r:2.8},
-  {who:'Don Ramón',txt:'¿Escuchaste la campana anoche? Sonó a las tres en punto. La iglesia no tiene campana desde el ochenta y siete. Igual dormí bárbaro.',pos:()=>ramon.root.position},
-  {who:'Doña Elsa',txt:'Voy a la panadería. Cerró en el noventa y cuatro, pero yo voy igual. El día que abra quiero ser la primera.',pos:()=>elsa.root.position},
+  {who:'Don Ramón (dormido)',txt:()=>RAMON_ZZ[((time/6)|0)%RAMON_ZZ.length],pos:()=>ramon.root.position},
   {who:'Kiosquero',txt:'Alfajor, mil novecientos ochenta y siete pesos. Es el precio de siempre, nene. Siempre.',pos:()=>kq.root.position,r:4.2},
-  {who:'El pibe que corre',txt:'¡Correte! Mi vieja me mandó a comprar pan y ya di cuarenta vueltas. No encuentro la salida de la plaza.',pos:()=>pibe.root.position,r:3.2},
   {who:'???',narr:true,txt:'Mira para el lado del campo. Lo que sea que está esperando, todavía no llegó.',pos:()=>esq.root.position,r:3.2},
 ];
 const dlg=$('#dlg'),who=$('#who'),txt=$('#txt');let cur=null,chars=0,curTxt='';
@@ -1511,7 +1531,14 @@ let items=[...document.querySelectorAll('#items .it')];let mi=0;
 function setMi(i){mi=i;items.forEach((b,j)=>b.classList.toggle('on',j===mi));}
 /* menú: principal o la elección de modo (Exploración / Historia, ésta todavía no) */
 function showNav(id){$('#items').hidden=id!=='items';$('#modes').hidden=id!=='modes';$('#credits').hidden=true;items=[...document.querySelectorAll('#'+id+' .it')];setMi(0);}
-function ensureAudio(){if(!AC)startAudio();}
+function ensureAudio(){if(!AC)startAudio();unlockAudio();}
+/* iPhone: con la llave de silencio, Web Audio no suena; si hay un <audio> sonando (aunque sea silencio) o la sesión es
+   "playback", sí. Se arranca con el primer toque */
+let silentEl=null;
+function unlockAudio(){try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
+  if(!silentEl){silentEl=new Audio('data:audio/wav;base64,UklGRsQPAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YaAPAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA');silentEl.loop=true;silentEl.setAttribute('playsinline','');silentEl.volume=.01;}
+  if(silentEl.paused)silentEl.play().catch(()=>{});if(AC&&AC.state!=='running')AC.resume().catch(()=>{});}
+['pointerdown','touchend','keydown'].forEach(ev=>addEventListener(ev,()=>{ensureAudio();},{passive:true}));
 function setMuted(m){muted=m;const t=muted?'NO':'SÍ';$('#mute').textContent='SONIDO: '+t;$('#sndItem').textContent='Sonido: '+(muted?'no':'sí');if(master)master.gain.value=muted?0:.9;}
 function act(a){ensureAudio();
   if(a==='modes')showNav('modes');
@@ -1524,7 +1551,15 @@ function act(a){ensureAudio();
     menuLight.intensity=0;camPos.set(S0.x-Math.sin(S0.yaw)*5.2,2.8,S0.z-Math.cos(S0.yaw)*5.2);document.querySelector('.ver').hidden=true;document.body.classList.remove('in-menu');started=true;
     const tip=$('#tip');tip.textContent=matchMedia('(pointer:coarse)').matches?'Joystick: moverte (a fondo, correr) · Arrastrá: cámara · Dos dedos: zoom':'WASD o flechas: moverte · Shift: correr · E: bici · Arrastrá el mouse: girar la cámara';tip.hidden=false;setTimeout(()=>tip.hidden=true,6000);}
   else if(a==='snd')setMuted(!muted);
+  else if(a==='fs')toggleFS();
   else if(a==='cred')$('#credits').hidden=!$('#credits').hidden;}
+/* pantalla completa (Android/PC). En iPhone Safari no deja: se avisa cómo agregarlo a la pantalla de inicio, que abre sin barras */
+function toggleFS(){const d=document,el=d.documentElement;
+  if(d.fullscreenElement||d.webkitFullscreenElement){(d.exitFullscreen||d.webkitExitFullscreen).call(d);return;}
+  const rq=el.requestFullscreen||el.webkitRequestFullscreen;
+  if(rq)Promise.resolve(rq.call(el)).then(()=>{try{screen.orientation.lock('landscape').catch(()=>{});}catch(e){}}).catch(fsTip);else fsTip();}
+function fsTip(){const tip=$('#tip');tip.textContent='En iPhone: tocá Compartir y "Agregar a pantalla de inicio". Abrilo desde ese ícono y se juega en pantalla completa.';tip.hidden=false;setTimeout(()=>tip.hidden=true,7000);}
+$('#fsBtn').addEventListener('click',toggleFS);
 document.querySelectorAll('.it').forEach(b=>{b.addEventListener('mouseenter',()=>{const i=items.indexOf(b);if(i>=0&&!b.disabled)setMi(i);});b.addEventListener('click',()=>{const i=items.indexOf(b);if(i>=0)setMi(i);act(b.dataset.a);});});
 addEventListener('keydown',e=>{if(started)return;
   const step=d=>{let i=mi;do{i=(i+d+items.length)%items.length;}while(items[i].disabled);setMi(i);};
@@ -2117,7 +2152,7 @@ function locomotion(r,dt){const A=r.acts,I=A.Idle_Loop,Wk=A.Walk_Loop,J=A.Jog_Fw
   Wk.time=f(L.p)*dW;J.time=f(L.p+L.phJ)*dJ;I.time=(L.it%dI);}
 function updateModels(dt){if(!MODELS)return;
   const pr=player.rig;if(pr)locomotion(pr,dt);
-  if(elsa.rig)setAnim(elsa.rig,Math.abs(Math.cos(time*.07))>.15?'Walk_Loop':'Idle_Loop',.85);
+
   const cp=camera.position;
   for(const r of rigged){let d2=dt;
     if(r.proc!==player){const root=r.proc.root;if(!root.visible)continue;const d=Math.hypot(cp.x-root.position.x,cp.z-root.position.z);
@@ -2223,7 +2258,6 @@ function rideIKpose(r,Bn){const c=r.c;
     spawn(player,{shirt:0x1b2340,shirtTex:andyShirt,print:printTex(),sneakers:true,tipping:true,pants:0x1e2638,cargo:true,clothes:true,smooth:true,armThin:.84,legThin:.95,shoe:0x1d1d1f,tattoos:true,blackSleeve:true,beard:.5,beardCol:0x24170f,fade:.85,hairCol:0x24170f,
       hairs:[['Hair_Buzzed',0x1e140d],['Hair_Beard',0x24170f,{k:.92,py:1.62,pz:.02}]],cap:true,wide:.92});
     spawn(ramon,{shirt:0x6b6250,pants:0x3d3a33,shoe:0x2a211a,longSleeve:true,hairCol:0xb5b2ab,hairs:[['Hair_SimpleParted',0xb5b2ab],['Hair_Beard',0xb5b2ab]],boina:0x1d1d22,anim:'Sitting_Idle_Loop',skinTint:[.95,.9,.86],wide:.95,z:.3,y:-.03});
-    spawn(elsa,{female:true,shirt:0x7a4a5a,pants:0x4a3540,skirt:true,shoe:0x2a2020,longSleeve:true,hairCol:0xb9b4ae,hairs:[['Hair_Buns',0xb9b4ae]],anim:'Walk_Loop',skinTint:[1,.95,.9],wide:1.05});
     spawn(kq,{shirt:0xd8d4c8,pants:0x2c2c2c,shoe:0x222222,hairCol:0x231a12,hairs:[['Hair_SimpleParted',0x231a12],['Hair_Beard',0x231a12]],anim:'Idle_Talking_Loop',skinTint:[.92,.86,.8],wide:1.15});
     spawn(esq,{shirt:0x16171b,pants:0x111114,shoe:0x0c0c0c,longSleeve:true,hairCol:0x0a0a0a,hairs:[['Hair_Buzzed',0x0a0a0a]],eyeCol:0x050505,noBrows:true,anim:'Idle_Loop',ts:.15,skinTint:[1.12,1.1,1.1]});
     setLoad('');
@@ -2656,8 +2690,19 @@ function drawMinimap(P,th){const el=MM.el;if(!el||!started)return;if(!MM.base)bu
 
 /* ---- Mapa grande: todo el pueblo, el norte arriba, con los lugares y dónde estás ---- */
 const BM={el:document.getElementById('bigmap'),c:document.getElementById('bigmapC'),open:false};
-function toggleBigMap(v){BM.open=v??!BM.open;BM.el.hidden=!BM.open;}
-MM.el.addEventListener('click',()=>{if(started)toggleBigMap(true);});BM.el.addEventListener('click',()=>toggleBigMap(false));
+function toggleBigMap(v){BM.open=v??!BM.open;BM.el.hidden=!BM.open;if(BM.open){BM.s=1;BM.x=BM.y=0;bmT();}}
+MM.el.addEventListener('click',()=>{if(started)toggleBigMap(true);});
+BM.el.addEventListener('click',e=>{if(e.target===BM.el||e.target.classList.contains('close'))toggleBigMap(false);});
+BM.s=1;BM.x=0;BM.y=0;BM.pt=new Map();
+function bmT(){BM.c.style.transform=`translate(${BM.x}px,${BM.y}px) scale(${BM.s})`;}
+function bmZoom(f){BM.s=Math.max(1,Math.min(5,BM.s*f));if(BM.s===1){BM.x=BM.y=0;}bmT();}
+BM.c.addEventListener('wheel',e=>{e.preventDefault();bmZoom(Math.exp(-e.deltaY*.0015));},{passive:false});
+BM.c.addEventListener('pointerdown',e=>{BM.c.setPointerCapture(e.pointerId);BM.pt.set(e.pointerId,{x:e.clientX,y:e.clientY});});
+BM.c.addEventListener('pointermove',e=>{const p=BM.pt.get(e.pointerId);if(!p)return;
+  if(BM.pt.size===1){BM.x+=e.clientX-p.x;BM.y+=e.clientY-p.y;}
+  else if(BM.pt.size===2){const [a,b]=[...BM.pt.entries()],o=a[0]===e.pointerId?b[1]:a[1],d0=Math.hypot(p.x-o.x,p.y-o.y),d1=Math.hypot(e.clientX-o.x,e.clientY-o.y);if(d0>10)bmZoom(d1/d0);}
+  p.x=e.clientX;p.y=e.clientY;bmT();});
+['pointerup','pointercancel'].forEach(ev=>BM.c.addEventListener(ev,e=>BM.pt.delete(e.pointerId)));
 addEventListener('keydown',e=>{if(!started)return;if(e.code==='KeyM'){e.preventDefault();toggleBigMap();}else if(e.code==='Escape'&&BM.open)toggleBigMap(false);});
 function drawBigMap(P){if(!BM.open)return;if(!MM.base)buildMinimap();const c=BM.c,W=WORLD.x1-WORLD.x0,H=WORLD.z1-WORLD.z0,S=5;
   if(c.width!==W*S){c.width=W*S;c.height=H*S;}const g=c.getContext('2d');g.drawImage(MM.base,0,0,c.width,c.height);g.fillStyle='rgba(0,0,0,.12)';g.fillRect(0,0,c.width,c.height);
@@ -2817,17 +2862,12 @@ function frame(now){
     if(!started){const ndc=tmp3.set(P.x,1.1,P.z).project(camera);const goal=port?0:.42;orbit.frame=Math.max(-3,Math.min(3,orbit.frame+(goal-ndc.x)*Math.min(1,dt*6)*d*.5));}
   }
 
-  /* Elsa */
-  const ex=12*Math.sin(time*.07),ev=Math.cos(time*.07);elsa.root.position.x=ex;elsa.root.rotation.y=ev>0?Math.PI/2:-Math.PI/2;
-  elsa.ph=(elsa.ph||0)+dt*2.4*Math.abs(ev)*1.2;walkAnim(elsa,elsa.ph,Math.min(1,Math.abs(ev)*3));elsa.armR.rotation.x=.05;
-  track(elsa,elsa.root.rotation.y,1.1,2.2,dt);
-  /* Ramón, kiosquero, esquina */
-  track(ramon,ramon.root.rotation.y,1.1,2.5,dt);
+  /* Ramón dormido (cabeza caída, respira), kiosquero, esquina */
+  ramon.nod=.8+Math.sin(time*.9)*.03;ramon.head.rotation.y=.25;
+  if(ramonZ){ramonZ.position.set(ramon.root.position.x+.12,1.42+Math.sin(time*1.3)*.06,ramon.root.position.z+.1);ramonZ.material.opacity=.5+Math.sin(time*2)*.3;}
   track(kq,kq.root.rotation.y,1,2.5,dt);
   esq.body.scale.y=1+Math.sin(time*1.1)*.006;track(esq,esq.root.rotation.y,Math.PI,.55,dt);
   /* bici */
-  bikeS+=dt*3.6;const bp=loopPos(bikeS);pibe.root.position.set(bp[0],0,bp[1]);bikeYaw+=wrap(bp[2]-bikeYaw)*Math.min(1,dt*6);pibe.root.rotation.y=bikeYaw;
-  pibe.ph+=dt*8;walkAnim(pibe,pibe.ph,1);track(pibe,bikeYaw,.8,3,dt);
   track(paco,Math.PI,1.2,2,dt);track(colo,colo.root.rotation.y,1.1,2.5,dt);
   /* portón del taller: se abre cuando te acercás (a pie o en bici) */
   {const G=tallerGate,dx=P.x-16,dz=P.z+49.75,near=((Math.abs(dz)<4.2&&dx>-9&&dx<7)||(rata.root.visible&&Math.hypot(rata.root.position.x-16,rata.root.position.z+49.75)<4.5))?1:0;G.open+=(near-G.open)*Math.min(1,dt*2);
