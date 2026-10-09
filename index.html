@@ -57,7 +57,7 @@ body.in-menu #stats{display:none}
 /* gTa el cartero: gTa de chapa (Black Ops One) y "el cartero" en Oswald naranja, dibujados en un canvas (logoDraw).
    El texto de abajo queda en HTML. */
 .logo{text-shadow:none}
-.logo canvas{display:block;width:min(480px,78vw);height:auto;margin-left:-8px}
+.logo canvas{display:block;height:min(40vh,380px);width:auto;max-width:78vw;object-fit:contain;object-position:left center;margin-left:-8px}
 .logo .l3{display:block;font-size:clamp(20px,3.2vw,30px);letter-spacing:.14em;color:var(--dim);margin-top:2px;border-top:2px solid var(--sodium);padding-top:10px;width:fit-content;text-shadow:0 2px 0 #000}
 #items,#modes{display:grid;gap:2px;justify-items:start}
 .it s{text-decoration-thickness:2px}.it small{font-size:.6em;letter-spacing:.1em;color:var(--blood);margin-left:10px;vertical-align:middle}
@@ -141,7 +141,7 @@ body.in-menu #joy,body.in-menu #rot{display:none!important}
 <button id="bikeBtn" type="button" hidden>E · Subirse a la bici</button>
 <div id="menu">
   <div class="mcol">
-    <h1 class="logo" aria-label="gTa el cartero, en busca de su libertad"><canvas id="logoC" width="880" height="400" aria-hidden="true"></canvas><span class="l3">en busca de su libertad</span></h1>
+    <h1 class="logo" aria-label="gTa el cartero, en busca de su libertad"><canvas id="logoC" width="880" height="520" aria-hidden="true"></canvas></h1>
     <nav id="items" aria-label="Menú principal">
       <button class="it on" type="button" data-a="modes">Iniciar partida</button>
       <button class="it" type="button" data-a="cont" disabled>Continuar</button>
@@ -1360,18 +1360,34 @@ function loopPos(s){const L=44,P=176;s=((s%P)+P)%P;const k=Math.floor(s/L),f=s%L
   if(k===0)return[-22+f,-22,Math.PI/2];if(k===1)return[22,-22+f,0];if(k===2)return[22-f,22,-Math.PI/2];return[-22,22-f,Math.PI];}
 
 
-/* ---- Logo del menú (opción 4, elegida por Camilo): "gTa" de chapa metálica (Black Ops One) con un par de enredaderas
-   oscuras que cuelgan, y "el cartero" en Oswald naranja, espaciado. Procedural, semilla fija. Se dibuja cuando cargan las letras. ---- */
-function logoDraw(){const C=$('#logoC');if(!C)return;const W=C.width,H=C.height,g=C.getContext('2d');let sd=9;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;
+/* ---- Logo del menú (opción 4, elegida por Camilo), en bloque justificado: "gTa" de chapa metálica (Black Ops One) con dos
+   enredaderas oscuras, "el cartero" en Oswald naranja y "en busca de su libertad" abajo; los tres renglones miden lo mismo
+   de punta a punta (se calcula el tamaño de las dos primeras y el espaciado de la última con el borde real de las letras).
+   Procedural, semilla fija. Se dibuja cuando cargan las letras; el alto del canvas sale del armado. ---- */
+function logoDraw(){const C=$('#logoC');if(!C)return;const W=C.width,X0=20,X1=W-20,TW=X1-X0;let sd=9;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;
+  const F='"Black Ops One", Impact, sans-serif',F2='Oswald, "Arial Narrow", sans-serif',F3='"IM Fell English SC", Georgia, serif';
+  const mc=document.createElement('canvas').getContext('2d');
+  /* arma un renglón letra por letra: devuelve las posiciones para que el borde de tinta vaya de X0 a X1 */
+  const line=(chars,sp)=>{let x=0;const out=[];let L=1e9,R=-1e9,asc=0,des=0;chars.forEach(([ch,font],i)=>{mc.font=font;const m=mc.measureText(ch);
+      if(ch!==' '){L=Math.min(L,x-m.actualBoundingBoxLeft);R=Math.max(R,x+m.actualBoundingBoxRight);asc=Math.max(asc,m.actualBoundingBoxAscent);des=Math.max(des,m.actualBoundingBoxDescent);}
+      out.push([ch,font,x]);x+=m.width+(i<chars.length-1?sp:0);});return {out,L,R,w:R-L,asc,des};};
+  /* gTa y "el cartero": se escala la letra hasta que el ancho de tinta sea TW */
+  const fit=(mk)=>{let k=1;for(let i=0;i<3;i++){const l=mk(k);k*=TW/l.w;}return mk(k);};
+  const g1=fit(k=>line([['g',236],['T',270],['a',236]].map(([c,s])=>[c,`${s*k}px ${F}`]),-10*k));
+  const g2=fit(k=>line([...'el cartero'].map(c=>[c,`600 ${104*k}px ${F2}`]),14*k));
+  /* subtítulo: tamaño fijo y el espacio entre letras se reparte hasta llenar el ancho */
+  const sub=[...'EN BUSCA DE SU LIBERTAD'].map(c=>[c,`${TW*.068}px ${F3}`]);let g3=line(sub,0);g3=line(sub,(TW-g3.w)/(sub.length-1));
+  const gap1=TW*.035,gap2=TW*.05,y1=14+g1.asc,y2=y1+g1.des+gap1+g2.asc,y3=y2+g2.des+gap2+g3.asc,H=Math.ceil(y3+g3.des+16);
+  C.height=H;const g=C.getContext('2d');
   const cv=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
-  const F='"Black Ops One", Impact, sans-serif';
-  const mk=cv(),m=mk.getContext('2d');m.fillStyle='#fff';let x=24;for(const [ch,sz] of [['g',236],['T',270],['a',236]]){m.font=sz+'px '+F;m.fillText(ch,x,240);x+=m.measureText(ch).width+4;}
+  const put=(ctx,l,y)=>{for(const [ch,font,x] of l.out){ctx.font=font;ctx.fillText(ch,X0-l.L+x,y);}};
+  const mk=cv(),m=mk.getContext('2d');m.fillStyle='#fff';put(m,g1,y1);
   const MD=m.getImageData(0,0,W,H).data,A=(px,py)=>px<0||py<0||px>=W||py>=H?0:MD[((py|0)*W+(px|0))*4+3];
   const edge=(dx,dy,col)=>{const t=cv(),e=t.getContext('2d');e.fillStyle=col;e.fillRect(0,0,W,H);e.globalCompositeOperation='destination-in';e.drawImage(mk,0,0);e.globalCompositeOperation='destination-out';e.drawImage(mk,dx,dy);return t;};
   /* cara de metal: bandas de brillo, cepillado y rayones */
-  const fc=cv(),f=fc.getContext('2d'),gr=f.createLinearGradient(0,40,0,300);[[0,'#e9ecee'],[.35,'#8a9096'],[.5,'#f4f6f7'],[.62,'#5f656b'],[1,'#b5bbc0']].forEach(([p,c])=>gr.addColorStop(p,c));f.fillStyle=gr;f.fillRect(0,0,W,H);
-  for(let i=0;i<2600;i++){f.fillStyle=`rgba(${r()<.5?'0,0,0':'255,255,255'},${.04+r()*.08})`;f.fillRect(r()*W,r()*H,20+r()*90,1);}
-  f.lineCap='round';for(let i=0;i<70;i++){const px=r()*W,py=r()*H,a=r()*6.28,l=6+r()*30;f.strokeStyle=`rgba(30,30,30,${.25+r()*.4})`;f.lineWidth=.8+r();f.beginPath();f.moveTo(px,py);f.lineTo(px+Math.cos(a)*l,py+Math.sin(a)*l);f.stroke();}
+  const top=y1-g1.asc,bot=y1+g1.des,fc=cv(),f=fc.getContext('2d'),gr=f.createLinearGradient(0,top,0,bot);[[0,'#e9ecee'],[.35,'#8a9096'],[.5,'#f4f6f7'],[.62,'#5f656b'],[1,'#b5bbc0']].forEach(([p,c])=>gr.addColorStop(p,c));f.fillStyle=gr;f.fillRect(0,0,W,H);
+  for(let i=0;i<2600;i++){f.fillStyle=`rgba(${r()<.5?'0,0,0':'255,255,255'},${.04+r()*.08})`;f.fillRect(r()*W,top+r()*(bot-top),20+r()*90,1);}
+  f.lineCap='round';for(let i=0;i<70;i++){const px=r()*W,py=top+r()*(bot-top),a=r()*6.28,l=6+r()*30;f.strokeStyle=`rgba(30,30,30,${.25+r()*.4})`;f.lineWidth=.8+r();f.beginPath();f.moveTo(px,py);f.lineTo(px+Math.cos(a)*l,py+Math.sin(a)*l);f.stroke();}
   f.globalCompositeOperation='destination-in';f.drawImage(mk,0,0);f.globalCompositeOperation='source-over';
   f.drawImage(edge(3,4,'rgba(255,255,255,.7)'),0,0);f.drawImage(edge(-4,-5,'rgba(0,0,0,.65)'),0,0);
   /* volumen: sombra, espesor y cara */
@@ -1379,15 +1395,16 @@ function logoDraw(){const C=$('#logoC');if(!C)return;const W=C.width,H=C.height,
   {const t=cv(),e=t.getContext('2d');e.fillStyle='#1c1c1e';e.fillRect(0,0,W,H);e.globalCompositeOperation='destination-in';e.drawImage(mk,0,0);for(let i=8;i>0;i--)g.drawImage(t,i*.6,i);}
   g.drawImage(fc,0,0);
   /* dos enredaderas ralas que se agarran arriba de una letra y cuelgan */
-  const topAt=px=>{for(let y=20;y<250;y++)if(A(px,y)>100)return y;return -1;};
+  const topAt=px=>{for(let y=Math.max(0,top-4|0);y<bot;y++)if(A(px,y)>100)return y;return -1;};
   const leaf=(px,py,a,s)=>{g.save();g.translate(px,py);g.rotate(a);g.fillStyle=`hsl(${95+r()*30},${20+r()*20}%,${8+r()*10}%)`;g.beginPath();g.moveTo(0,0);g.bezierCurveTo(s*.5,-s*.55,s*1.05,-s*.35,s*1.2,0);g.bezierCurveTo(s*1.05,s*.35,s*.5,s*.55,0,0);g.fill();g.restore();};
-  for(let i=0;i<2;i++){const px=40+r()*(W-80),t=topAt(px|0);if(t<0){i--;continue;}const pts=[[px-20-r()*30,t+r()*6]];let cx=pts[0][0],cy=pts[0][1];
+  for(let i=0,tries=0;i<2&&tries<50;i++,tries++){const px=X0+40+r()*(TW-80),t=topAt(px|0);if(t<0){i--;continue;}const pts=[[px-20-r()*30,t+r()*6]];let cx=pts[0][0],cy=pts[0][1];
     for(let k=0;k<5;k++){const t2=topAt((cx+10)|0);if(t2<0)break;cx+=10;cy=t2+r()*5;pts.push([cx,cy]);}let len=40+r()*110;while(len>0){cx+=r()*10-5;cy+=9+r()*4;len-=10;pts.push([cx,cy]);}
     g.save();g.lineCap='round';g.lineJoin='round';g.strokeStyle='#141c10';g.lineWidth=2.5+r()*1.5;g.shadowColor='rgba(0,0,0,.7)';g.shadowBlur=5;g.shadowOffsetY=2;g.beginPath();g.moveTo(...pts[0]);for(const p of pts.slice(1))g.lineTo(...p);g.stroke();g.restore();
     for(let k=1;k<pts.length;k++){if(r()<.3)continue;const [qx,qy]=pts[k-1],[px2,py2]=pts[k],a=Math.atan2(py2-qy,px2-qx),s2=r()<.5?1:-1;leaf(px2,py2,a+s2*(.6+r()),8+r()*12);}}
-  /* el cartero */
-  g.save();g.font='600 104px Oswald, "Arial Narrow", sans-serif';g.letterSpacing='14px';g.fillStyle='#f2a646';g.shadowColor='#000';g.shadowOffsetX=4;g.shadowOffsetY=5;g.fillText('el cartero',30,372);g.restore();}
-Promise.race([Promise.all([document.fonts.load('236px "Black Ops One"'),document.fonts.load('600 104px Oswald')]),new Promise(r=>setTimeout(r,2500))]).then(logoDraw,logoDraw);
+  /* el cartero y el subtítulo */
+  g.save();g.fillStyle='#f2a646';g.shadowColor='#000';g.shadowOffsetX=4;g.shadowOffsetY=5;put(g,g2,y2);g.restore();
+  g.save();g.fillStyle='#b8ad94';g.shadowColor='#000';g.shadowBlur=8;g.shadowOffsetY=3;put(g,g3,y3);g.restore();}
+Promise.race([Promise.all([document.fonts.load('236px "Black Ops One"'),document.fonts.load('600 104px Oswald'),document.fonts.load('40px "IM Fell English SC"')]),new Promise(r=>setTimeout(r,2500))]).then(logoDraw,logoDraw);
 
 /* ---- Diálogos ---- */
 const talk=[
