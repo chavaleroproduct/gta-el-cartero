@@ -4,8 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>gTa el cartero</title>
+<meta name="description" content="Pela, el cartero de Chañar Ladeado, en busca de su libertad. Un juego entre amigos, homenaje a Grand Theft Auto.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="gTa el cartero">
+<meta property="og:description" content="En busca de su libertad. Jugalo en el navegador, en la compu o en el celu.">
+<meta property="og:url" content="https://chavaleroproduct.github.io/gta-el-cartero/">
+<meta property="og:image" content="https://chavaleroproduct.github.io/gta-el-cartero/preview.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=VT323&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Alfa+Slab+One&family=VT323&display=swap">
 <style>
 /* Layout: juego a pantalla completa, render 3D en baja resolución + HUD de texto pixelado encima */
 :root{
@@ -45,11 +54,11 @@ body.in-menu #stats{display:none}
   background:linear-gradient(90deg,rgba(4,5,8,.9) 0%,rgba(4,5,8,.62) 34%,rgba(4,5,8,0) 62%)}
 .mcol{pointer-events:auto;display:grid;gap:clamp(18px,4vh,34px);max-width:520px}
 .logo{font-family:var(--f-title);font-weight:400;margin:0;line-height:.86;color:var(--ink);text-shadow:0 4px 0 #000,0 0 24px rgba(176,52,43,.35)}
-/* gTa el cartero: g y a en minúscula, T mayúscula (en la letra sin versalitas, si no todo sale en mayúscula) */
-.logo .l1{display:block;font-family:'IM Fell English',Georgia,serif;font-size:clamp(44px,7.4vw,78px);letter-spacing:.02em;color:var(--blood);margin-bottom:-6px;line-height:1}
-.logo .l1 b{font-weight:400;font-size:1.18em;color:var(--ink)}
-.logo .l2{display:block;font-family:'IM Fell English',Georgia,serif;font-size:clamp(58px,11vw,118px);letter-spacing:.005em}
-.logo .l3{display:block;font-size:clamp(20px,3.2vw,30px);letter-spacing:.14em;color:var(--blood);margin-top:10px;border-top:2px solid var(--blood);padding-top:10px;width:fit-content}
+/* gTa el cartero: letras de cemento (Alfa Slab One) con musgo y enredaderas verde oscuro, dibujadas en un canvas (logoDraw).
+   El texto de abajo queda en HTML. */
+.logo{text-shadow:none}
+.logo canvas{display:block;width:min(480px,78vw);height:auto;margin-left:-8px}
+.logo .l3{display:block;font-size:clamp(20px,3.2vw,30px);letter-spacing:.14em;color:#8fa679;margin-top:2px;border-top:2px solid #34502c;padding-top:10px;width:fit-content;text-shadow:0 2px 0 #000}
 #items,#modes{display:grid;gap:2px;justify-items:start}
 .it s{text-decoration-thickness:2px}.it small{font-size:.6em;letter-spacing:.1em;color:var(--blood);margin-left:10px;vertical-align:middle}
 .it{font-family:var(--f-hud);font-size:clamp(26px,3.4vw,34px);letter-spacing:.06em;text-transform:uppercase;color:var(--ink);background:none;border:0;padding:2px 0 2px 28px;cursor:pointer;position:relative;text-shadow:0 2px 0 #000;text-align:left}
@@ -131,7 +140,7 @@ body.in-menu #joy,body.in-menu #rot{display:none!important}
 <button id="bikeBtn" type="button" hidden>E · Subirse a la bici</button>
 <div id="menu">
   <div class="mcol">
-    <h1 class="logo" aria-label="gTa el cartero, en busca de su libertad"><span class="l1">g<b>T</b>a</span><span class="l2">el cartero</span><span class="l3">en busca de su libertad</span></h1>
+    <h1 class="logo" aria-label="gTa el cartero, en busca de su libertad"><canvas id="logoC" width="880" height="500" aria-hidden="true"></canvas><span class="l3">en busca de su libertad</span></h1>
     <nav id="items" aria-label="Menú principal">
       <button class="it on" type="button" data-a="modes">Iniciar partida</button>
       <button class="it" type="button" data-a="cont" disabled>Continuar</button>
@@ -1348,6 +1357,53 @@ let bikeS=40,bikeYaw=0;
 function loopPos(s){const L=44,P=176;s=((s%P)+P)%P;const k=Math.floor(s/L),f=s%L;
   if(k===0)return[-22+f,-22,Math.PI/2];if(k===1)return[22,-22+f,0];if(k===2)return[22-f,22,-Math.PI/2];return[-22,22-f,Math.PI];}
 
+
+/* ---- Logo del menú: "gTa" y "el cartero" en cemento gastado, con musgo y enredaderas que trepan y cuelgan.
+   Todo procedural (semilla fija, siempre sale igual). Se dibuja cuando carga la letra. ---- */
+function logoDraw(){const C=$('#logoC');if(!C)return;const W=C.width,H=C.height,g=C.getContext('2d');let sd=7;const r=()=>(sd=(sd*16807)%2147483647)/2147483647,rr=(a,b)=>a+r()*(b-a);
+  const cv=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
+  const F='"Alfa Slab One", Rockwell, Georgia, serif';
+  /* máscara de las letras */
+  const mk=cv(),m=mk.getContext('2d');m.fillStyle='#fff';m.textBaseline='alphabetic';
+  let x=24;for(const [ch,sz] of [['g',250],['T',290],['a',250]]){m.font=sz+'px '+F;m.fillText(ch,x,262);x+=m.measureText(ch).width+4;}
+  m.font='150px '+F;m.fillText('el cartero',18,455);
+  const MD=m.getImageData(0,0,W,H).data,A=(px,py)=>px<0||py<0||px>=W||py>=H?0:MD[((py|0)*W+(px|0))*4+3];
+  /* cara de cemento: base, manchas, poros y fisuras */
+  const fc=cv(),f=fc.getContext('2d');const gr=f.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#74726b');gr.addColorStop(.45,'#55534d');gr.addColorStop(.5,'#6a6862');gr.addColorStop(1,'#44423d');f.fillStyle=gr;f.fillRect(0,0,W,H);
+  for(let i=0;i<260;i++){const px=r()*W,py=r()*H,rad=rr(10,60),q=f.createRadialGradient(px,py,0,px,py,rad),d=r()<.5;q.addColorStop(0,d?'rgba(30,28,24,.22)':'rgba(190,186,175,.16)');q.addColorStop(1,'rgba(0,0,0,0)');f.fillStyle=q;f.fillRect(px-rad,py-rad,rad*2,rad*2);}
+  for(let i=0;i<9000;i++){const v=r();f.fillStyle=v<.5?`rgba(20,20,18,${rr(.15,.5)})`:`rgba(220,216,205,${rr(.08,.3)})`;const s=rr(1,v<.08?5:2.6);f.fillRect(r()*W,r()*H,s,s);}
+  f.lineCap='round';for(let i=0;i<26;i++){let px=r()*W,py=r()*H,a=r()*6.28;f.strokeStyle=`rgba(18,16,14,${rr(.5,.85)})`;f.lineWidth=rr(1,2.4);f.beginPath();f.moveTo(px,py);const n=rr(6,16);for(let k=0;k<n;k++){a+=rr(-.7,.7);px+=Math.cos(a)*rr(5,12);py+=Math.sin(a)*rr(5,12);f.lineTo(px,py);}f.stroke();}
+  /* manchas de humedad que chorrean */
+  for(let i=0;i<40;i++){const px=r()*W,py=r()*H*.9,l=rr(20,90),q=f.createLinearGradient(0,py,0,py+l);q.addColorStop(0,'rgba(25,32,20,.4)');q.addColorStop(1,'rgba(25,32,20,0)');f.fillStyle=q;f.fillRect(px,py,rr(3,10),l);}
+  /* musgo: verde oscuro, sobre todo en los bordes de arriba de cada letra */
+  for(let i=0;i<700;i++){const px=r()*W,py=r()*H;const nearTop=A(px,py)>10&&A(px,py-16)<10;if(!nearTop&&r()<.8)continue;
+    const rad=rr(6,24),q=f.createRadialGradient(px,py,0,px,py,rad),hue=rr(85,118)|0;q.addColorStop(0,`hsla(${hue},40%,${rr(12,24)|0}%,.85)`);q.addColorStop(1,`hsla(${hue},40%,15%,0)`);f.fillStyle=q;f.fillRect(px-rad,py-rad,rad*2,rad*2);}
+  for(let i=0;i<14000;i++){const px=r()*W,py=r()*H;if(!(A(px,py)>10&&A(px,py-10)<10)&&r()<.9)continue;f.fillStyle=`hsla(${rr(80,120)|0},45%,${rr(10,30)|0}%,${rr(.4,.9)})`;f.fillRect(px,py,rr(1.5,4),rr(1.5,4));}
+  f.globalCompositeOperation='destination-in';f.drawImage(mk,0,0);f.globalCompositeOperation='source-over';
+  /* biselado: luz arriba a la izquierda, sombra abajo a la derecha */
+  const edge=(dx,dy,col)=>{const t=cv(),e=t.getContext('2d');e.fillStyle=col;e.fillRect(0,0,W,H);e.globalCompositeOperation='destination-in';e.drawImage(mk,0,0);e.globalCompositeOperation='destination-out';e.drawImage(mk,dx,dy);return t;};
+  f.drawImage(edge(4,5,'rgba(215,212,200,.5)'),0,0);f.drawImage(edge(-5,-6,'rgba(10,10,8,.7)'),0,0);
+  /* cuerpo: sombra, espesor de la losa y la cara */
+  g.clearRect(0,0,W,H);g.save();g.shadowColor='rgba(0,0,0,.9)';g.shadowBlur=28;g.shadowOffsetY=12;g.drawImage(mk,0,0);g.restore();
+  {const t=cv(),e=t.getContext('2d');e.fillStyle='#24231f';e.fillRect(0,0,W,H);e.globalCompositeOperation='destination-in';e.drawImage(mk,0,0);for(let i=9;i>0;i--)g.drawImage(t,i*.6,i);}
+  g.drawImage(fc,0,0);
+  /* enredaderas: tallos que siguen el borde de arriba de las letras, guías que cuelgan y dos que trepan desde abajo */
+  const topAt=(px,y0,y1)=>{for(let y=y0;y<y1;y++)if(A(px,y)>100)return y;return -1;};
+  const leaf=(px,py,a,s)=>{g.save();g.translate(px,py);g.rotate(a);const hue=rr(92,128),lt=rr(9,19);g.fillStyle=`hsl(${hue},${rr(22,38)}%,${lt}%)`;g.beginPath();g.moveTo(0,0);g.bezierCurveTo(s*.5,-s*.55,s*1.05,-s*.35,s*1.2,0);g.bezierCurveTo(s*1.05,s*.35,s*.5,s*.55,0,0);g.fill();
+    g.strokeStyle=`hsla(${hue},35%,${lt+12}%,.6)`;g.lineWidth=1;g.beginPath();g.moveTo(s*.1,0);g.lineTo(s*1.05,0);g.stroke();g.restore();};
+  const stem=(pts,w)=>{g.save();g.lineCap='round';g.lineJoin='round';g.shadowColor='rgba(0,0,0,.6)';g.shadowBlur=6;g.shadowOffsetY=3;g.strokeStyle='#1b2a16';g.lineWidth=w;g.beginPath();g.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length-1;i++){const mx=(pts[i][0]+pts[i+1][0])/2,my=(pts[i][1]+pts[i+1][1])/2;g.quadraticCurveTo(pts[i][0],pts[i][1],mx,my);}g.stroke();g.restore();
+    for(let i=1;i<pts.length;i++){if(r()<.25)continue;const [px,py]=pts[i],[qx,qy]=pts[i-1],a=Math.atan2(py-qy,px-qx),s2=r()<.5?1:-1;leaf(px,py,a+s2*rr(.6,1.5),rr(9,20));if(r()<.35)leaf(px,py,a-s2*rr(.6,1.4),rr(7,14));}};
+  for(const [y0,y1,x0,x1] of [[30,270,20,W-20],[320,480,10,W-10]]){let run=[];for(let px=x0;px<x1;px+=11){const t=topAt(px,y0,y1);
+      if(t<0||r()<.06){if(run.length>4&&r()<.8)stem(run,rr(3,5));run=[];continue;}run.push([px+rr(-3,3),t+rr(-4,7)]);}
+    if(run.length>4)stem(run,rr(3,5));}
+  for(let i=0;i<22;i++){const px=rr(30,W-30),band=r()<.55?[30,270]:[320,480],t=topAt(px|0,band[0],band[1]);if(t<0)continue;const pts=[[px,t]];let cx=px,cy=t,len=rr(40,150);
+    while(len>0){cx+=rr(-6,6);cy+=rr(8,13);len-=10;pts.push([cx,cy]);}stem(pts,rr(2,3.2));}
+  {const pts=[];let cx=30,cy=H-10;for(let i=0;i<34;i++){cx+=rr(2,9);cy-=rr(8,13);pts.push([cx+Math.sin(i*.6)*14,cy]);}stem(pts,5);}
+  {const pts=[];let cx=W-70,cy=H-20;for(let i=0;i<18;i++){cx+=rr(-8,4);cy-=rr(8,12);pts.push([cx+Math.sin(i*.7)*10,cy]);}stem(pts,4);}
+  /* oscurecer todo un poco, de noche */
+  g.globalCompositeOperation='source-atop';const dk=g.createLinearGradient(0,0,W,H);dk.addColorStop(0,'rgba(6,12,6,.12)');dk.addColorStop(1,'rgba(6,12,6,.45)');g.fillStyle=dk;g.fillRect(0,0,W,H);g.globalCompositeOperation='source-over';}
+Promise.race([document.fonts.load('150px "Alfa Slab One"'),new Promise(r=>setTimeout(r,2500))]).then(logoDraw,logoDraw);
 
 /* ---- Diálogos ---- */
 const talk=[
