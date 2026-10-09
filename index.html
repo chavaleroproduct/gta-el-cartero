@@ -2284,7 +2284,7 @@ function tioChoose(c){if(!(player.sitting&&curBench===BENCH)||tioS.st!=='sit'||t
 document.querySelectorAll('#choiceT button').forEach(b=>b.addEventListener('click',()=>tioChoose(b.dataset.c)));
 addEventListener('keydown',e=>{if(e.code==='Digit1'||e.code==='Numpad1')tioChoose('asado');else if(e.code==='Digit2'||e.code==='Numpad2')tioChoose('favor');});
 /* la chata: pick-up doble cabina blanca (como la de las fotos, sin marca). Frente hacia +z local, origen en el piso al centro */
-const chata=(()=>{const g=new THREE.Group();g.visible=false;
+const chata=(()=>{const g=new THREE.Group(),wheels=[];g.visible=false;
   const S=(c,r=.4,m=.2,e,ei=.8)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m,...(e?{emissive:e,emissiveIntensity:ei}:{})});
   const white=S(0xffffff,.32,.05,0x3a3a3a,1),glass=S(0x111820,.1,.35),black=S(0x1b1c1e,.6,.05),satin=S(0x1e1f22,.85,0),chrome=S(0xd6dade,.28,.35),alloy=S(0xbfc4c9,.3,.35),tyre=S(0x1a1a1a,.92,0),
     head=S(0xe8eef5,.15,.3,0xc9d4de,.9),lamp=S(0x0f1215,.2,.4),tail=S(0x9a1510,.3,.1,0x6a0a06),rev=S(0xeeeeee,.2,.1,0x555555),plate=S(0xf3f3ee,.5,0);
@@ -2334,7 +2334,7 @@ const chata=(()=>{const g=new THREE.Group();g.visible=false;
   const h=.125,tireG=new THREE.LatheGeometry([[.25,-h],[.35,-h],[.385,-h+.03],[.395,-h*.4],[.395,h*.4],[.385,h-.03],[.35,h],[.25,h]].map(q=>new THREE.Vector2(...q)),28),
     rimG=new THREE.LatheGeometry([[0,h-.06],[.07,h-.055],[.2,h-.075],[.255,h-.01],[.265,h],[.265,-h],[0,-h]].map(q=>new THREE.Vector2(...q)),24),
     spG=new THREE.BoxGeometry(.03,.19,.06),capG=new THREE.CylinderGeometry(.05,.05,.03,14),nutG=new THREE.CylinderGeometry(.012,.012,.03,6);
-  for(const z of [-1.55,1.55])for(const s of [-1,1]){const w=new THREE.Group();w.position.set(s*.81,.395,z);g.add(w);
+  for(const z of [-1.55,1.55])for(const s of [-1,1]){const w=new THREE.Group();w.rotation.order='YXZ';w.position.set(s*.81,.395,z);g.add(w);wheels.push({g:w,front:z>0});
     const t=new THREE.Mesh(tireG,tyre);t.rotation.z=Math.PI/2;w.add(t);const rm=new THREE.Mesh(rimG,lamp);rm.rotation.z=-s*Math.PI/2;w.add(rm);
     for(let i=0;i<5;i++){const a=i/5*Math.PI*2,sp=new THREE.Mesh(spG,alloy);sp.position.set(s*(h-.025),Math.sin(a)*.14,Math.cos(a)*.14);sp.rotation.x=-a;w.add(sp);}
     const ring=new THREE.Mesh(new THREE.TorusGeometry(.245,.02,6,28),alloy);ring.rotation.y=Math.PI/2;ring.position.x=s*(h-.01);w.add(ring);
@@ -2343,8 +2343,58 @@ const chata=(()=>{const g=new THREE.Group();g.visible=false;
   /* sombra en el piso */
   const st=ctex(64,128,(c,w,hh)=>{const q=c.createRadialGradient(w/2,hh/2,4,w/2,hh/2,hh/2);q.addColorStop(0,'rgba(0,0,0,.7)');q.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=q;c.fillRect(0,0,w,hh);});
   const sp=new THREE.Mesh(new THREE.PlaneGeometry(2.6,6.2),new THREE.MeshBasicMaterial({map:st,transparent:true,depthWrite:false}));sp.rotation.x=-Math.PI/2;sp.position.y=.012;g.add(sp);
-  g.position.set(-56.3,.03,9.05);g.rotation.y=-Math.PI/2;scene.add(g);return {g};})();
-function chataShow(){if(chata.g.visible)return;chata.g.visible=true;solid(-56.3,9.05,2.7,1.0);
+  g.position.set(-56.3,.03,9.05);g.rotation.y=-Math.PI/2;scene.add(g);return {g,wheels};})();
+/* ---- Manejar la chata: E al lado para subirte (Pela queda adentro, no se ve), mismos controles que la bici pero de auto:
+   acelera, frena, marcha atrás, dobla según la distancia entre ejes. Choca con lo mismo que Pela (tres círculos a lo largo).
+   Para ir al campo del Seba: subir a la ruta por la avenida (donde está el cartel), doblar a la derecha (hacia el este)
+   y hacer un tramito: al segundo, fundido y vas al campo (goCampo). ---- */
+let driving=false;const car={v:0,steer:0,fromSign:false,go:-1,snd:null,hid:[]};
+const chataSolid={x0:0,x1:0,z0:0,z1:0};
+function chataBox(){const G=chata.g,y=G.rotation.y,c=Math.abs(Math.cos(y)),s=Math.abs(Math.sin(y)),hx=c*.98+s*2.62,hz=s*.98+c*2.62;
+  Object.assign(chataSolid,{x0:G.position.x-hx,x1:G.position.x+hx,z0:G.position.z-hz,z1:G.position.z+hz});}
+function chataNear(P){const G=chata.g;if(!G.visible||driving)return false;const y=G.rotation.y,dx=P.x-G.position.x,dz=P.z-G.position.z,lx=dx*Math.cos(y)-dz*Math.sin(y),lz=dx*Math.sin(y)+dz*Math.cos(y);
+  return Math.abs(lx)<1.9&&Math.abs(lz)<3.2;}
+function carSound(on){if(!AC)return;
+  if(on&&!car.snd){const o=AC.createOscillator(),o2=AC.createOscillator(),f=AC.createBiquadFilter(),g=AC.createGain();o.type='sawtooth';o2.type='square';o.frequency.value=34;o2.frequency.value=17;
+    f.type='lowpass';f.frequency.value=260;g.gain.value=0;o.connect(f);o2.connect(f);f.connect(g);g.connect(master);o.start();o2.start();g.gain.setTargetAtTime(.08,AC.currentTime,.3);car.snd={o,o2,f,g};}
+  else if(!on&&car.snd){const s=car.snd;s.g.gain.setTargetAtTime(0,AC.currentTime,.15);setTimeout(()=>{s.o.stop();s.o2.stop();},900);car.snd=null;}}
+function carEnter(){const P=player.root.position,G=chata.g;if(!chataNear(P)||riding)return;driving=true;car.v=0;car.steer=0;car.go=-1;
+  const i=solids.indexOf(chataSolid);if(i>=0)solids.splice(i,1);
+  P.set(G.position.x,groundY(G.position.x,G.position.z),G.position.z);player.yaw=G.rotation.y;player.root.rotation.set(0,player.yaw,0);player.spd=0;
+  car.hid=[];player.root.children.forEach(o=>{if(o.visible){car.hid.push(o);o.visible=false;}});
+  player.root.add(G);G.position.set(0,0,0);G.rotation.set(0,0,0);orbit.yaw=0;carSound(true);updateBikeUI();}
+function carExit(force){if(!driving)return;if(!force&&Math.abs(car.v)>2)return;const P=player.root.position,G=chata.g;driving=false;
+  scene.add(G);G.position.set(P.x,P.y,P.z);G.rotation.set(0,player.yaw,0);chataBox();solids.push(chataSolid);
+  car.hid.forEach(o=>o.visible=true);car.hid=[];
+  /* bajás del lado del conductor (izquierda); si no hay lugar, por el otro lado o por atrás */
+  const sx=Math.cos(player.yaw),sz=-Math.sin(player.yaw);let ok=false;for(const s of [1,-1]){const ox=P.x+sx*1.55*s,oz=P.z+sz*1.55*s;if(!blocked(ox,oz,.35)){P.x=ox;P.z=oz;ok=true;break;}}
+  if(!ok){P.x-=Math.sin(player.yaw)*3.3;P.z-=Math.cos(player.yaw)*3.3;}
+  player.spd=0;car.v=0;car.go=-1;carSound(false);updateBikeUI();}
+function driveUpdate(dt,P){const mv=busy?0:(+k.up||0)-(+k.down||0),tn=busy?0:(+k.left||0)-(+k.right||0),runK=k.run||k.jrun,vmax=runK?22:15;
+  let a;if(mv>0)a=car.v<-.1?14:6*mv*Math.max(0,1-car.v/vmax);else if(mv<0)a=car.v>.1?-14:-4*(-mv)*Math.max(0,1+car.v/6);else a=-Math.sign(car.v)*Math.min(Math.abs(car.v)/Math.max(dt,1e-3),2.5);
+  car.v+=a*dt;
+  const st=tn*.55*(1-.55*Math.min(1,Math.abs(car.v)/18));car.steer+=(st-car.steer)*Math.min(1,dt*5);
+  const hit=(x,z,yw)=>{const fx=Math.sin(yw),fz=Math.cos(yw);for(const t of [-1.7,0,1.7])if(blocked(x+fx*t,z+fz*t,.95))return true;return false;};
+  const ny=player.yaw+car.v*Math.tan(car.steer)/3.1*dt;if(!hit(P.x,P.z,ny))player.yaw=ny;
+  const fx=Math.sin(player.yaw),fz=Math.cos(player.yaw),nx=P.x+fx*car.v*dt,nz=P.z+fz*car.v*dt;
+  if(!hit(nx,nz,player.yaw)){P.x=nx;P.z=nz;}else if(!hit(nx,P.z,player.yaw)){P.x=nx;car.v*=1-dt*2;}else if(!hit(P.x,nz,player.yaw)){P.z=nz;car.v*=1-dt*2;}else car.v*=-.2;
+  P.y+=(groundY(P.x,P.z)-P.y)*Math.min(1,dt*14);player.root.rotation.set(0,player.yaw,0);player.spd=car.v;player.mv=mv;player.turnV=0;
+  /* la carrocería se inclina un poco al doblar y al acelerar; ruedas que giran y las de adelante doblan */
+  const G=chata.g;G.rotation.z+=(-car.steer*Math.min(1,Math.abs(car.v)/12)*.05-G.rotation.z)*Math.min(1,dt*4);G.rotation.x+=(-a*.003-G.rotation.x)*Math.min(1,dt*4);
+  for(const w of chata.wheels){w.g.rotation.x+=car.v*dt/.395;if(w.front)w.g.rotation.y=car.steer;}
+  if(car.snd){const r=Math.abs(car.v),f=34+(r%7)/7*40+r*2.4,t=AC.currentTime;car.snd.o.frequency.setTargetAtTime(f,t,.08);car.snd.o2.frequency.setTargetAtTime(f/2,t,.08);
+    car.snd.f.frequency.setTargetAtTime(260+r*45+(mv>0?200:0),t,.1);car.snd.g.gain.setTargetAtTime(muted?0:.07+Math.min(.06,r*.004),t,.1);}
+  /* ruta: entrar por la avenida (el cartel) y doblar a la derecha; después de un tramito, al segundo se va al campo */
+  if(P.z>-66)car.fromSign=false;else if(P.z<-71.5&&P.x>AV.x0-3&&P.x<AV.x1+3)car.fromSign=true;
+  if(car.fromSign&&car.go<0&&P.z<-70&&P.x>-50&&Math.sin(player.yaw)>.3&&car.v>3)car.go=0;
+  if(car.go>=0){car.go+=dt;if(car.go>1){car.go=-1;car.fromSign=false;goCampo();}}}
+/* si te matan manejando, la chata vuelve a la entrada de lo del tío */
+function chataHome(){const G=chata.g;G.position.set(-56.3,.03,9.05);G.rotation.set(0,-Math.PI/2,0);chataBox();}
+/* el campo del Seba todavía no existe: por ahora el fundido avisa y te deja en la ruta, frente al cartel, mirando a la avenida.
+   Cuando esté hecho, acá se arma la escena de la entrada del campo. */
+function goCampo(){scene2(['Por la ruta, rumbo al campo del Seba...','CAMPO DE SEBASTIÁN','Próximamente: la entrada del campo'],()=>{const P=player.root.position;
+  P.set(-67,groundY(-67,-77),-77);player.yaw=0;player.root.rotation.set(0,0,0);car.v=0;car.steer=0;});}
+function chataShow(){if(chata.g.visible)return;chata.g.visible=true;chataBox();solids.push(chataSolid);
   for(const dz of [-1.8,0,1.8])puff(new THREE.Vector3(-56.3+dz,.25,9.05),5,{x:0,z:0});}
 function tioEvUpdate(dt){const sit=player.sitting&&curBench===BENCH&&tioS.st==='sit';
   if(sit){tioEv.sit+=dt;if(tioEv.choice)tioEv.ct+=dt;}
@@ -2406,7 +2456,7 @@ function truckSound(k,horn){if(!AC)return;if(!truckSnd){const g=AC.createGain();
       const lp2=AC.createBiquadFilter();lp2.type='lowpass';lp2.frequency.value=1100;lp2.Q.value=.8;const bp=AC.createBiquadFilter();bp.type='peaking';bp.frequency.value=420;bp.gain.value=6;lp2.connect(bp);bp.connect(g);g.connect(master);
       for(const f of [138,174,207]){const o=AC.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(f*.97,t);o.frequency.linearRampToValueAtTime(f,t+.12);o.detune.value=(Math.random()-.5)*14;o.connect(lp2);o.start(t);o.stop(t+len+.05);}}}}
 /* morir: pantalla negra y volvés a aparecer en la plaza, al lado de la bici */
-function killed(msg){if(busy)return;if(riding)toggleBike();if(player.sitting)standUp();stats.vida=0;updateStats();
+function killed(msg){if(busy)return;if(driving){carExit(true);chataHome();}if(riding)toggleBike();if(player.sitting)standUp();stats.vida=0;updateStats();
   scene2([msg,'...','Te despertás en la plaza, todo dolorido.'],()=>{const S0=START_SPOT,P=player.root.position;stats.vida=100;updateStats();
     P.set(S0.x,groundY(S0.x,S0.z),S0.z);player.yaw=S0.yaw;player.root.rotation.y=S0.yaw;player.spd=0;
     andyBike.position.set(S0.bx,groundY(S0.bx,S0.bz),S0.bz);andyBike.rotation.y=S0.bth;Object.assign(bikeSolid,{x0:S0.bx-.9,x1:S0.bx+.9,z0:S0.bz-.4,z1:S0.bz+.4});});}
@@ -2525,7 +2575,7 @@ function scene2(lines,done){busy=true;const fd=document.getElementById('fade'),f
   requestAnimationFrame(()=>fd.classList.add('on'));let i=0;const next=()=>{i++;if(i<lines.length){ft.textContent=lines[i];setTimeout(next,1500);}else{fd.classList.remove('on');setTimeout(()=>{fd.hidden=true;busy=false;},600);}};
   setTimeout(()=>{if(done)done();next();},1700);}
 function sleepHome(){scene2(['Pela entra a su casa...','Duerme como un tronco. Afuera, el monte no para de hacer ruidos...','Cordura recuperada'],()=>{stats.cordura=100;cordTip=false;mins=(mins+7*60)%1440;updateStats();});}
-function faint(){if(busy)return;if(riding)toggleBike();if(player.sitting)standUp();
+function faint(){if(busy)return;if(driving)carExit(true);if(riding)toggleBike();if(player.sitting)standUp();
   scene2(['Todo da vueltas... Pela se desmaya.','Se despierta en su casa, sin saber cómo llegó.','Necesita dormir de verdad.'],()=>{
     stats.cordura=45;cordTip=false;updateStats();const P=player.root.position;P.set(HOME.x,groundY(HOME.x,HOME.z),HOME.z);player.yaw=HOME.yaw+Math.PI;player.root.rotation.y=player.yaw;player.spd=0;
     andyBike.position.set(HOME.bx,groundY(HOME.bx,HOME.bz),HOME.bz);andyBike.rotation.y=HOME.bth;Object.assign(bikeSolid,{x0:HOME.bx-.4,x1:HOME.bx+.4,z0:HOME.bz-.9,z1:HOME.bz+.9});});}
@@ -2538,6 +2588,8 @@ function work(){scene2(['Jornada de trabajo en el correo...','Clasificar cartas,
 function payGym(){if(stats.plata<CUOTA){const tip=$('#tip');tip.textContent='No te alcanza: la cuota sale '+fmt(CUOTA)+'. Andá a trabajar al correo.';tip.hidden=false;setTimeout(()=>tip.hidden=true,3500);return;}
   scene2(['Pagaste la cuota: '+fmt(CUOTA),'Entrenando con el Colo...','+ 10 de fuerza'],()=>{stats.plata-=CUOTA;stats.fuerza=Math.min(100,stats.fuerza+10);updateStats();});}
 function pickAction(){const P=player.root.position;if(!started||busy)return null;
+  if(driving)return Math.abs(car.v)<2?{label:'E · Bajarse de la chata',fn:()=>carExit()}:null;
+  if(!riding&&!player.sitting&&chataNear(P))return{label:'E · Subirse a la chata',fn:carEnter};
   if(player.sitting)return{label:'E · Levantarse',fn:standUp};
   if(!riding)for(const b of supplies)if(Math.hypot(b.position.x-P.x,b.position.z-P.z)<1.4)return{label:'E · Agarrar suministros',fn:()=>takeSupply(b)};
   if(!riding&&Math.hypot(HOME_DOOR.x-P.x,HOME_DOOR.z-P.z)<1.8)return{label:'E · Entrar a dormir (recuperar cordura)',fn:sleepHome};
@@ -2700,6 +2752,7 @@ function frame(now){
   /* jugador */
   const P=player.root.position;
   if(started){
+    if(driving)driveUpdate(dt,P);else{
     if(player.sitting&&(k.up||k.down)&&!busy)standUp();
     const mv=player.sitting||busy?0:(+k.up||0)-(+k.down||0),runK=k.run||k.jrun;
     /* a pie: W camina, con Shift corre. La velocidad sube y baja de a poco y el giro tiene inercia */
@@ -2729,6 +2782,7 @@ function frame(now){
     if(mv!==0&&!riding){player.ph+=Math.abs(sp)*dt*2.3;walkAnim(player,player.ph,1);}else walkAnim(player,0,0);
     if(player.sitting&&curBench){[P.x,P.z]=seatPos(curBench,curBench.lx);player.yaw=curBench.th;player.root.rotation.y=player.yaw;player.spd=0;}
     {let nb2=null;if(!riding&&!player.sitting)for(const b of BENCHES)if(Math.hypot(b.x-P.x,b.z-P.z)<(b.r||1.7))nb2=b;if(!!nb2!==benchUI.near||nb2!==benchUI.b){benchUI.near=!!nb2;benchUI.b=nb2;updateBikeUI();}}
+    }
     /* el Tano: si te quedás sentado con él, a los ~9 s sale el padre; cuando te vas, vuelve a entrar */
     {const show=player.sitting&&curBench===TANO_BENCH&&!tanoEv.choice&&tanoEv.sit>1.2,ch=$('#choice');if(ch.hidden===show)ch.hidden=!show;}
     if(player.sitting&&curBench===TANO_BENCH){tanoEv.sit+=dt;if(tanoEv.choice&&tanoEv.sit-tanoEv.choiceT>6)papaTano.root.visible=true;
@@ -2737,15 +2791,15 @@ function frame(now){
     if(andrea.jointTip&&Math.hypot(andrea.root.position.x-P.x,andrea.root.position.z-P.z)<25){smokeT-=dt;if(smokeT<0){smokeT=.45;andrea.jointTip.getWorldPosition(tmp3);puff(tmp3,1,{x:0,z:0});}}
     updateSmoke(dt);cordUpdate(dt);
     tioUpdate(dt);tioEvUpdate(dt);cafeUpdate(dt);andresUpdate(dt);truckUpdate(dt);rataUpdate(dt);
-    const nb=!riding&&!player.sitting&&!benchUI.near&&Math.hypot(andyBike.position.x-P.x,andyBike.position.z-P.z)<1.9;
+    const nb=!riding&&!driving&&!player.sitting&&!benchUI.near&&Math.hypot(andyBike.position.x-P.x,andyBike.position.z-P.z)<1.9;
     if(nb!==bikeUI.near){bikeUI.near=nb;}updateBikeUI();
   }else{player.root.rotation.y=player.yaw;walkAnim(player,0,0);player.head.rotation.y=Math.sin(time*.4)*.25;}
   const fx=Math.sin(player.yaw),fz=Math.cos(player.yaw);
   {const port=camera.aspect<1;
     if(!started){if(!orbit.drag)orbit.yaw+=(orbit.menuYaw-orbit.yaw)*Math.min(1,dt*.6);}
     else if(!orbit.drag&&Math.abs(player.mv||0)>0){orbit.yaw=wrap(orbit.yaw);orbit.yaw*=Math.exp(-dt*1.6);}
-    const d=started?(riding?6.4:5.2)*orbit.zoom:(port?2.7:2.05)*orbit.zoom,pitch=started?(orbit.ps=(orbit.ps??orbit.pitch)+(orbit.pitch-(orbit.ps??orbit.pitch))*Math.min(1,dt*8)):orbit.pitch*.3+.02;
-    const th=player.yaw+orbit.yaw,ty=started?1.35:1.32;
+    const d=started?(driving?8.6*Math.max(orbit.zoom,.75):(riding?6.4:5.2)*orbit.zoom):(port?2.7:2.05)*orbit.zoom,pitch=started?(orbit.ps=(orbit.ps??orbit.pitch)+(orbit.pitch-(orbit.ps??orbit.pitch))*Math.min(1,dt*8)):orbit.pitch*.3+.02;
+    const th=player.yaw+orbit.yaw,ty=started?(driving?2.1:1.35):1.32;
     const pp=Math.max(pitch,-.12),up=started?Math.max(0,-pitch-.12):0;
     const want=tmp.set(P.x-Math.sin(th)*d*Math.cos(pp),ty+d*Math.sin(pp),P.z-Math.cos(th)*d*Math.cos(pp));
     /* la cámara no atraviesa paredes: si hay una entre Pela y la cámara, se acerca (y se acomoda rápido) */
@@ -3150,7 +3204,7 @@ const bikeSound=(function(){let S=null,tick=0;
       o.connect(hp);hp.connect(g);g.connect(master);o.start(t);o.stop(t+.02);}}};})();
 flushTrees();mergeStatic();precompileAll();
 requestAnimationFrame(frame);
-if(location.hash==='#dbg')window.__dbg={tioEv,chata,tioChoose,chataShow,BENCH,THREE,scene,camera,player,orbit,andyBike,toggleBike,act,bikeParts,frame,LOCO,paco,colo,tio,andrea,papaTano,moza,get porro(){return porro;},andres,andresS,rata,rataS,TRUCKS,supplies,PERF,renderer,useE,stats,cafe,solids,blocked,get riding(){return riding;},get audio(){return AC;},k,get ufo(){return ufo;},spawn,person,setAnim,get MODELS(){return MODELS;},trip,alienP,alienP2,tanoChoose,TANO_BENCH,sitDown,tanoEv};
+if(location.hash==='#dbg')window.__dbg={car,carEnter,carExit,get driving(){return driving;},AV,tioEv,chata,tioChoose,chataShow,BENCH,THREE,scene,camera,player,orbit,andyBike,toggleBike,act,bikeParts,frame,LOCO,paco,colo,tio,andrea,papaTano,moza,get porro(){return porro;},andres,andresS,rata,rataS,TRUCKS,supplies,PERF,renderer,useE,stats,cafe,solids,blocked,get riding(){return riding;},get audio(){return AC;},k,get ufo(){return ufo;},spawn,person,setAnim,get MODELS(){return MODELS;},trip,alienP,alienP2,tanoChoose,TANO_BENCH,sitDown,tanoEv};
 })();
 </script>
 
