@@ -61,7 +61,8 @@ body.in-menu #stats{display:none}
 #dlg.narr .txt{color:var(--dim);font-style:italic}
 /* Menú principal: escena 3D de fondo, columna de menú a la izquierda */
 #menu{pointer-events:none;position:fixed;inset:0;display:flex;align-items:center;padding-inline:clamp(16px,6vw,88px);
-  background:linear-gradient(90deg,rgba(4,5,8,.9) 0%,rgba(4,5,8,.62) 34%,rgba(4,5,8,0) 62%)}
+  background:#120b06 url(assets/menu-fondo.jpg) 75% center/cover no-repeat}
+/* el fondo del menú es una imagen (el escritorio del cartero, `.claude/menu-bocetos.js` → __menuFondo); la escena 3D recién se dibuja al iniciar partida */
 .mcol{pointer-events:auto;display:grid;gap:clamp(18px,4vh,34px);max-width:520px}
 .logo{font-family:var(--f-title);font-weight:400;margin:0;line-height:.86;color:var(--ink);text-shadow:0 4px 0 #000,0 0 24px rgba(176,52,43,.35)}
 /* gTa el cartero: gTa de chapa (Black Ops One) y "el cartero" en Oswald naranja, dibujados en un canvas (logoDraw).
@@ -92,7 +93,7 @@ body.in-menu #choice,body.in-menu #choiceT{display:none!important}
 #flash{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at 50% 35%,#ffffff 0%,rgba(225,240,255,.85) 35%,rgba(200,220,255,.4) 70%)}
 #haze{position:fixed;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen;background:radial-gradient(ellipse at 30% 40%,rgba(120,60,170,.35),transparent 55%),radial-gradient(ellipse at 70% 65%,rgba(40,140,120,.3),transparent 55%)}
 #tip{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 64px);transform:translateX(-50%);font-family:var(--f-hud);font-size:21px;background:var(--panel);border:1px solid var(--edge);padding:6px 14px;white-space:nowrap;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis}
-@media (max-width:700px){#menu{align-items:flex-end;padding-block:0 calc(env(safe-area-inset-bottom,0px) + 40px);background:linear-gradient(0deg,rgba(4,5,8,.92) 0%,rgba(4,5,8,.6) 45%,rgba(4,5,8,0) 72%)}}
+@media (max-width:700px){#menu{align-items:flex-end;padding-block:0 calc(env(safe-area-inset-bottom,0px) + 40px);background:linear-gradient(0deg,rgba(8,5,3,.94) 0%,rgba(8,5,3,.6) 50%,rgba(8,5,3,0) 75%),#120b06 url(assets/menu-fondo.jpg) 72% center/cover no-repeat}}
 #pad{position:fixed;left:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:none;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,58px);gap:6px}
 #pad button{font-family:var(--f-hud);font-size:26px;color:var(--ink);background:rgba(10,12,14,.6);border:2px solid var(--edge);touch-action:none}
 #pad .up{grid-column:2;grid-row:1}#pad .lt{grid-column:1;grid-row:2}#pad .dn{grid-column:2;grid-row:2}#pad .rt{grid-column:3;grid-row:2}
@@ -1322,12 +1323,15 @@ const bikeParts={th:0,wheels:[],steerAmt:0,cadence:0};
 const paco=person({skin:0xc59a78,skinCss:'#c59a78',shirt:0x2a2b2e,pants:0x2d3d5c,hair:0x16110c});
 paco.root.position.set(4.85,0,-53.95);paco.root.rotation.y=Math.PI;paco.body.visible=false;scene.add(paco.root);
 
-/* Don Ramón: viejo en el banco */
+/* el borracho de la plaza (sin nombre): viejo en el banco del medio. La variable sigue llamándose ramon */
 const ramon=person({skin:0xb48a6a,skinCss:'#b48a6a',shirt:0x6b6250,pants:0x3d3a33,hair:0x9a9a96,hat:0x1d1d22,longSleeve:true,fat:1.08,face:{beard:'rgba(170,168,160,.92)',brow:'rgba(200,200,195,.9)'}});
 sit(ramon);ramon.root.position.set(-5.8,0,-8.34);ramon.root.rotation.y=-Math.PI/4;
 ramon.armL.rotation.x=ramon.armR.rotation.x=-.35;ramon.armL.fore.rotation.x=ramon.armR.fore.rotation.x=-1;ramon.body.rotation.x=.12;scene.add(ramon.root);
-/* Don Ramón quedó en pedo y se durmió en el banco: botellas de vino y de cerveza tiradas a sus pies, una parada, y las "zzz" */
-const RAMON_ZZ=['Zzzz... la campana... a las tres... zzzz','Rrrrr... hic... otro vinito, Negro... zzz','Mmmh... dejame acá nomás... zzzz...','...'];let ramonZ=null;
+/* el borracho de la plaza: casi siempre dormido en pedo (cabeza caída, "zzz"); a veces se despierta y se queda sentado
+   con una birra en la mano, tomando de a sorbos. Botellas de vino y cerveza tiradas a sus pies, una parada */
+const RAMON_ZZ=['Zzzz... la campana... a las tres... zzzz','Rrrrr... hic... otro vinito, Negro... zzz','Mmmh... dejame acá nomás... zzzz...','...'];
+const RAMON_AWAKE=['Eh... ¿quién anda ahí? Ah, el cartero... hic... traeme una carta de amor, pibe.','Esta plaza... de noche... hay luces en el cielo, ¿sabés? Nadie me cree... hic.','Shhh... no le digas a nadie que estoy acá... jeje.','Una birrita más y me voy... hace tres días que digo lo mismo.'];
+const ramonS={sleep:true,t:R(40,70),nod:.8,beer:null};let ramonZ=null;
 (function(){const R0=ramon.root.position,fy=-Math.PI/4,fx=Math.sin(fy),fz=Math.cos(fy),rx=Math.cos(fy),rz=-Math.sin(fy),Y=.09;
   const vino=new THREE.MeshStandardMaterial({color:0x1f3a1c,roughness:.12,metalness:.1,transparent:true,opacity:.9}),birra=new THREE.MeshStandardMaterial({color:0x5a2e0c,roughness:.12,metalness:.1,transparent:true,opacity:.88}),lab=new THREE.MeshStandardMaterial({color:0xe9dcb8,roughness:.7});
   const V=a=>a.map(q=>new THREE.Vector2(q[0],q[1])),bG=new THREE.LatheGeometry(V([[0,0],[.033,0],[.034,.01],[.034,.17],[.03,.2],[.014,.24],[.013,.29],[.015,.295],[0,.295]]),16),
@@ -1438,7 +1442,7 @@ const talk=[
   {who:'Rata',txt:()=>RATA_LINES[Math.min(rataS.line,RATA_LINES.length-1)],pos:()=>rata.root.position,r:7,cond:()=>rataS.st==='talk'},
   {who:'Rata (desde el camión)',txt:()=>RATA_SHOUT[Math.min(rataS.line,RATA_SHOUT.length-1)],pos:()=>({x:RT_X+1.25,z:rataS.z-1}),r:26,cond:()=>rataS.st==='shout'},
   {who:'Paco',cond:()=>rataS.st!=='talk',txt:'¿Qué hacés, Pela? ¿Me trajiste la bici para arreglar? ¿Se te volvió a romper? Mirá lo que es esta moto, un desastre: el dueño ni la cuida. Se la voy a arreglar así nomás... vos no digas nada.',pos:()=>paco.root.position,r:2.8},
-  {who:'Don Ramón (dormido)',txt:()=>RAMON_ZZ[((time/6)|0)%RAMON_ZZ.length],pos:()=>ramon.root.position},
+  {who:'El borracho de la plaza',txt:()=>(ramonS.sleep?RAMON_ZZ:RAMON_AWAKE)[((time/6.5)|0)%(ramonS.sleep?RAMON_ZZ:RAMON_AWAKE).length],pos:()=>ramon.root.position},
   {who:'Kiosquero',txt:'Alfajor, mil novecientos ochenta y siete pesos. Es el precio de siempre, nene. Siempre.',pos:()=>kq.root.position,r:4.2},
   {who:'???',narr:true,txt:'Mira para el lado del campo. Lo que sea que está esperando, todavía no llegó.',pos:()=>esq.root.position,r:3.2},
 ];
@@ -2863,8 +2867,17 @@ function frame(now){
   }
 
   /* Ramón dormido (cabeza caída, respira), kiosquero, esquina */
-  ramon.nod=.8+Math.sin(time*.9)*.03;ramon.head.rotation.y=.25;
-  if(ramonZ){ramonZ.position.set(ramon.root.position.x+.12,1.42+Math.sin(time*1.3)*.06,ramon.root.position.z+.1);ramonZ.material.opacity=.5+Math.sin(time*2)*.3;}
+  {const S=ramonS;S.t-=dt;if(S.t<=0){S.sleep=!S.sleep;S.t=S.sleep?R(45,90):R(18,30);}
+    /* despierto: cabeza arriba, y cada tanto un sorbo (inclina la cabeza para atrás) */
+    const sip=!S.sleep&&(time%7)<1.2?Math.sin((time%7)/1.2*Math.PI):0;
+    S.nod+=((S.sleep?.8+Math.sin(time*.9)*.03:.08-sip*.35)-S.nod)*Math.min(1,dt*1.6);ramon.nod=S.nod;ramon.head.rotation.y=S.sleep?.25:Math.sin(time*.3)*.2;
+    /* la birra en la mano derecha, sólo despierto */
+    if(!S.beer){S.beer=new THREE.Mesh(new THREE.LatheGeometry([[0,0],[.033,0],[.034,.01],[.034,.17],[.03,.2],[.014,.24],[.013,.29],[.015,.295],[0,.295]].map(q=>new THREE.Vector2(q[0],q[1])),14),
+      new THREE.MeshStandardMaterial({color:0x5a2e0c,roughness:.12,metalness:.1,transparent:true,opacity:.9}));scene.add(S.beer);S.hb=ramon.rig&&ramon.rig.c.getObjectByName('hand_r');}
+    if(!S.sleep&&S.hb){S.hb.getWorldPosition(S.beer.position);S.beer.position.y-=.1;S.beer.rotation.set(0,0,-sip*.5);}
+    if(S.beer)S.beer.visible=!S.sleep;
+    if(ramonZ)ramonZ.visible=S.sleep;}
+  if(ramonZ&&ramonZ.visible){ramonZ.position.set(ramon.root.position.x+.12,1.42+Math.sin(time*1.3)*.06,ramon.root.position.z+.1);ramonZ.material.opacity=.5+Math.sin(time*2)*.3;}
   track(kq,kq.root.rotation.y,1,2.5,dt);
   esq.body.scale.y=1+Math.sin(time*1.1)*.006;track(esq,esq.root.rotation.y,Math.PI,.55,dt);
   /* bici */
@@ -2899,7 +2912,7 @@ function frame(now){
   if(started)chataCam();
   if(window.__camHook)window.__camHook(camera,P);
   if(started){trip.cam();camera.updateMatrixWorld();ufo(dt,P);bikeSound(dt);trip.update(dt,P);trip.pose();porro.update(dt,P);}
-  renderer.render(scene,camera);
+  if(started)renderer.render(scene,camera);   /* en el menú se ve la imagen de fondo: no hace falta dibujar el pueblo */
   requestAnimationFrame(frame);
 }
 /* ---- OVNIs (modo exploración): aparecen cuando mirás para arriba en dos lugares.
@@ -3244,7 +3257,7 @@ const bikeSound=(function(){let S=null,tick=0;
       o.connect(hp);hp.connect(g);g.connect(master);o.start(t);o.stop(t+.02);}}};})();
 flushTrees();mergeStatic();precompileAll();
 requestAnimationFrame(frame);
-if(location.hash==='#dbg')window.__dbg={car,carEnter,carExit,get driving(){return driving;},AV,tioEv,chata,tioChoose,chataShow,BENCH,THREE,scene,camera,player,orbit,andyBike,toggleBike,act,bikeParts,frame,LOCO,paco,colo,tio,andrea,papaTano,moza,get porro(){return porro;},andres,andresS,rata,rataS,TRUCKS,supplies,PERF,renderer,useE,stats,cafe,solids,blocked,get riding(){return riding;},get audio(){return AC;},k,get ufo(){return ufo;},spawn,person,setAnim,get MODELS(){return MODELS;},trip,alienP,alienP2,tanoChoose,TANO_BENCH,sitDown,tanoEv};
+if(location.hash==='#dbg')window.__dbg={CAFE_SEAT,ramonS,ramon,car,carEnter,carExit,get driving(){return driving;},AV,tioEv,chata,tioChoose,chataShow,BENCH,THREE,scene,camera,player,orbit,andyBike,toggleBike,act,bikeParts,frame,LOCO,paco,colo,tio,andrea,papaTano,moza,get porro(){return porro;},andres,andresS,rata,rataS,TRUCKS,supplies,PERF,renderer,useE,stats,cafe,solids,blocked,get riding(){return riding;},get audio(){return AC;},k,get ufo(){return ufo;},spawn,person,setAnim,get MODELS(){return MODELS;},trip,alienP,alienP2,tanoChoose,TANO_BENCH,sitDown,tanoEv};
 })();
 </script>
 
